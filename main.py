@@ -1,5 +1,4 @@
 import queue
-
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -19,37 +18,50 @@ _semaphore = threading.Semaphore(_threads)
 _sessions = queue.Queue(maxsize=_threads)
 
 
+import os
+
+
 def download_file(local_task: dict):
     file_url = local_task['url']
     path = local_task['path']
+    file = local_task['file']
+
     with _semaphore:
         try:
             if _sessions.empty():
                 _sessions.put(GumroadSession(_config["_gumroad_app_session"],
                                              _config["_gumroad_guid"],
                                              _config["userAgent"]))
-
             session = _sessions.get()
-            response = session.get(file_url, stream=True)  # set stream=True to retrieve the content in chunks
+            response = session.get(file_url, stream=True)
             response.raise_for_status()
+
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            total = int(response.headers.get('content-length', 0))  # get the total file size
-            print(f"Downloading {path} [{total / 1024 / 1024:.2f} MB]")
+            total = int(response.headers.get('content-length', 0))
+            tqdm.write(f"Downloading {file} [{total / 1024 / 1024:.2f} MB]")
+
+            # Check if file exists and size matches total size
+            if os.path.exists(path) and os.path.getsize(path) == total:
+                tqdm.write('File already downloaded and size matches, skipping download.')
+                _sessions.put(session)
+                return  # Skip the file download as it already exists with exact size
+
+            # Either file does not exist or size does not match, process with download
             with open(path, 'wb') as file, tqdm(
                     desc=path,
-                    total=total,  # total file size for progressbar
+                    total=total,
                     unit='B',
                     unit_scale=True,
                     unit_divisor=1024,
             ) as bar:
-                for data in response.iter_content(chunk_size=4096):  # retrieve content chunk by chunk
+                for data in response.iter_content(chunk_size=4096):
                     if data:
                         size = file.write(data)
                         bar.update(size)
+
             print(f'Successfully downloaded {file_url}')
             _sessions.put(session)
         except Exception as e:
-            # use `tqdm.write` to print errors to not mess with bar
             tqdm.write(f'Failed to download {file_url} due to {e}')
 
 
@@ -164,6 +176,8 @@ def get_product_info(product_urls: list) -> dict:
 _download_tasks = []
 
 if __name__ == '__main__':
+    with open('config.json') as f:
+        _config = json.load(f)
     gumroad_session = GumroadSession(_config["_gumroad_app_session"],
                                      _config["_gumroad_guid"],
                                      _config["userAgent"])
