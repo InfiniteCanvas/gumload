@@ -18,13 +18,10 @@ _semaphore = threading.Semaphore(_threads)
 _sessions = queue.Queue(maxsize=_threads)
 
 
-import os
-
-
 def download_file(local_task: dict):
     file_url = local_task['url']
     path = local_task['path']
-    file = local_task['file']
+    current_file_name = local_task['file']
 
     with _semaphore:
         try:
@@ -38,7 +35,7 @@ def download_file(local_task: dict):
 
             os.makedirs(os.path.dirname(path), exist_ok=True)
             total = int(response.headers.get('content-length', 0))
-            tqdm.write(f"Downloading {file} [{total / 1024 / 1024:.2f} MB]")
+            tqdm.write(f"Downloading {current_file_name} [{total / 1024 / 1024:.2f} MB]")
 
             # Check if file exists and size matches total size
             if os.path.exists(path) and os.path.getsize(path) == total:
@@ -48,7 +45,8 @@ def download_file(local_task: dict):
 
             # Either file does not exist or size does not match, process with download
             with open(path, 'wb') as file, tqdm(
-                    desc=path,
+                    leave=False,
+                    desc=current_file_name,
                     total=total,
                     unit='B',
                     unit_scale=True,
@@ -59,10 +57,10 @@ def download_file(local_task: dict):
                         size = file.write(data)
                         bar.update(size)
 
-            print(f'Successfully downloaded {file_url}')
+            print(f'Successfully downloaded {current_file_name}[{file_url}]')
             _sessions.put(session)
         except Exception as e:
-            tqdm.write(f'Failed to download {file_url} due to {e}')
+            tqdm.write(f'Failed to download {current_file_name}[{file_url}] due to {e}')
 
 
 def start_downloads(download_tasks: list):
@@ -162,14 +160,17 @@ def get_product_info(product_urls: list) -> dict:
     product_download_urls = {}
     for _url in product_urls:
         soup = gumroad_session.get_soup(_url)
-        raw_title = soup.find('title').text
+        script = _load_json_data(soup, "DownloadPageWithContent")
+        raw_title = script['purchase']['product_name']
         sanitized_title = sanitize_title(raw_title)
         print(f"Processing {sanitized_title}")
-        script = _load_json_data(soup, "DownloadPageWithContent")
         for _item in script['content']['content_items']:
             _file_name = f'{_item["file_name"]}.{_item["extension"]}'
             _url = f"{gumroad_session.base_url}{_item['download_url']}"
-            product_download_urls[sanitized_title] = {_file_name: _url}
+            if sanitized_title in product_download_urls:
+                product_download_urls[sanitized_title][_file_name] = _url
+            else:
+                product_download_urls[sanitized_title] = {_file_name: _url}
     return product_download_urls
 
 
@@ -184,10 +185,14 @@ if __name__ == '__main__':
 
     for creator in _config["creators"]:
         creator_name = creator["name"]
-        creator_folder = os.path.join(os.getcwd(), creator_name)
+        if "folder" in _config:
+            creator_folder = os.path.join(str(_config["folder"]), creator_name)
+        else:
+            creator_folder = os.path.join(os.getcwd(), creator_name)
+        print(f"Saving to {creator_folder}")
         product_pages = get_products(creator["id"])
         download_urls = get_product_info(product_pages)
-        print(f"{creator_name} has {len(product_pages)} products")
+        print(f"Downloading {creator_name} products [{len(product_pages)}]")
 
         for title, files in download_urls.items():
             title_folder = os.path.join(creator_folder, title)
@@ -195,7 +200,6 @@ if __name__ == '__main__':
 
             for file_name, url in files.items():
                 print(f" - {file_name}")
-                print(f" - {url}")
                 file_path = os.path.join(title_folder, file_name)
                 _download_tasks.append(
                     {'url': url,
@@ -203,7 +207,6 @@ if __name__ == '__main__':
                      'title': title, 'file': file_name,
                      'creator': creator_name,
                      'creator_folder': creator_folder})
-        break
 
     with open('download_tasks.json', 'w+') as f:
         for task in _download_tasks:
