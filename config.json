@@ -1,0 +1,15 @@
+{
+  "threads": 5,
+  "folder": "I:\\Gumroad\\",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 OPR/107.0.0.0",
+  "_gumroad_app_session": "your app session",
+  "_gumroad_guid": "your guid",
+  "creators": [
+    {
+      "id": "3515733564687",
+      "name": "Reine - this field is not needed though, just copy paste the shit from your library page response",
+      "count": 45
+    }
+
+  ]
+}
