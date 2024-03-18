@@ -64,7 +64,7 @@ class Database(object):
                                   "name": creator["name"],
                                   "purchase_ids": [],
                                   "type": DocType.CREATOR_PAGE})
-                tqdm.write(f"{creator['name']}[{creator['creator_id']}] inserted in creator page")
+                tqdm.write(f"{creator['name']}[{creator['id']}] inserted in creator page")
         with tqdm(total=len(results), desc='Processing results', dynamic_ncols=True) as pbar:
             for result in results:
                 product_info: dict = result["product"]
