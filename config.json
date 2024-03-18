@@ -1,6 +1,7 @@
 {
   "threads": 5,
   "only_specified_creators": true,
+  "match_size_using_content_info": true,
   "db_path": "gumload.json",
   "refresh": true,
   "folder": "I:\\Gumroad\\",

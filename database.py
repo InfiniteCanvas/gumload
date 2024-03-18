@@ -2,7 +2,6 @@ import pathlib
 import re
 from tinydb import TinyDB, Query
 from tqdm import tqdm
-
 from constants import DocType
 
 
@@ -13,7 +12,7 @@ def add_to_purchases(item):
     return transform
 
 
-def sanitize_title(raw_title: str) -> str:
+def sanitize_file_name(raw_file_name: str) -> str:
     """
     Function to sanitize string to work as part of a path.
 
@@ -23,11 +22,11 @@ def sanitize_title(raw_title: str) -> str:
     Returns:
         A sanitized string
     """
-    raw_title = raw_title.strip()  # remove leading and trailing white spaces
+    raw_file_name = raw_file_name.strip()  # remove leading and trailing white spaces
     # replace invalid filename characters with underscore
-    raw_title = re.sub(r'[\\/*?:"<>|]', '_', raw_title)
-    raw_title = pathlib.PurePath(raw_title).name
-    return raw_title
+    raw_file_name = re.sub(r'[\\/*?:"<>|]', '_', raw_file_name)
+    raw_file_name = pathlib.PurePath(raw_file_name).name
+    return raw_file_name
 
 
 class Database(object):
@@ -86,7 +85,7 @@ class Database(object):
 
     def update_products(self, response: dict, creator_id: str) -> None:
         raw_title = response["purchase"]["product_name"]
-        title = sanitize_title(raw_title)
+        title = sanitize_file_name(raw_title)
         content_items: dict = response['content']['content_items']
         purchase: dict = response["purchase"]
         purchase_id: str = purchase["id"]

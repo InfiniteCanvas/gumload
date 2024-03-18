@@ -15,6 +15,8 @@ class Config(dict):
 
         if 'only_specified_creators' not in self:
             self['only_specified_creators'] = True
+        if 'match_size_using_content_info' not in self:
+            self['match_size_using_content_info'] = True
         if 'threads' not in self:
             self['threads'] = 1
         if 'refresh' not in self:

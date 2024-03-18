@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 import constants
+import database
 from config import Config
 from database import Database
 from constants import DEFAULT_USER_AGENT, BASE_URL, LIBRARY_URL, ComponentType
@@ -117,20 +118,26 @@ class DownloadManager:
             creator_folder = os.path.join(self.__config["folder"], creator['name'])
             for product in products:
                 for content in product['content']:
-                    product_path = f"{os.path.join(creator_folder, product['name'], content['file_name'])}.{content['extension']}"
+                    product_path = f"{os.path.join(creator_folder, product['name'], database.sanitize_file_name(content['file_name']))}.{content['extension']}"
                     download_url = BASE_URL + content['download_url']
-                    download_tasks.append({"path": product_path, "url": download_url, "name": product['name']})
+                    download_tasks.append({"path": product_path, "url": download_url, "name": product['name'],
+                                           "size": content["file_size"]})
 
         tqdm.write(f"Downloading {len(download_tasks)} files")
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self.__download_product, download_tasks)
 
     def __download_product(self, download_task: dict) -> None:
-        with self.__semaphore:
+        with (self.__semaphore):
             session = self.__sessions.get()
             try:
                 path = download_task['path']
                 name = download_task['name']
+                if self.__config['match_size_using_content_info'] \
+                        and os.path.exists(path) \
+                        and os.path.getsize(path) == download_task['size']:
+                    tqdm.write(f"File [{name}] already downloaded and size matches, skipping download.")
+                    return
                 response = session.get(download_task['url'], stream=True)
                 response.raise_for_status()
                 os.makedirs(os.path.dirname(path), exist_ok=True)
