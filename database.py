@@ -1,7 +1,5 @@
 import pathlib
 import re
-
-import tinydb.operations
 from tinydb import TinyDB, Query
 from tqdm import tqdm
 
