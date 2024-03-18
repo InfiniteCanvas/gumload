@@ -121,10 +121,13 @@ class DownloadManager:
             creator_folder = os.path.join(self.__config["folder"], creator['name'])
             for product in products:
                 for content in product['content']:
-                    product_path = f"{os.path.join(creator_folder, product['name'], database.sanitize_file_name(content['file_name']))}.{content['extension']}"
-                    download_url = BASE_URL + content['download_url']
-                    download_tasks.append({"path": product_path, "url": download_url, "name": product['name'],
-                                           "size": content["file_size"]})
+                    try:
+                        product_path = f"{os.path.join(creator_folder, product['name'], database.sanitize_file_name(content['file_name']))}.{content['extension']}"
+                        download_url = BASE_URL + content['download_url']
+                        download_tasks.append({"path": product_path, "url": download_url, "name": product['name'],
+                                               "size": content["file_size"]})
+                    except Exception as e:
+                        tqdm.write(f"Something went wrong while processing {content}. \n{e}")
 
         tqdm.write(f"Downloading {len(download_tasks)} files")
         with concurrent.futures.ThreadPoolExecutor() as executor:
