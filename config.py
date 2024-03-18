@@ -13,6 +13,8 @@ class Config(dict):
 
         self.update(data)
 
+        if 'only_specified_creators' not in self:
+            self['only_specified_creators'] = True
         if 'threads' not in self:
             self['threads'] = 1
         if 'refresh' not in self:

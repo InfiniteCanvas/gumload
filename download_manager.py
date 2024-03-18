@@ -87,6 +87,7 @@ class DownloadManager:
         with self.__semaphore:
             session = self.__sessions.get()
             try:
+                tqdm.write(f"Processing {product['name']}...")
                 soup = session.get_soup(product['download_url'])
                 json_data = self.__load_json_data(soup, ComponentType.DOWNLOAD_PAGE_WITH_CONTENT)
                 with self.__db_lock:
@@ -104,8 +105,13 @@ class DownloadManager:
                 self.__update_products(creator["id"], creator["name"])
 
         download_tasks = []
-        for creator in self.__config['creators']:
-            creator_id = creator['id']
+        # only download from creators specified in config, else download everything in library
+        if self.__config["only_specified_creators"]:
+            creators = self.__config["creators"]
+        else:
+            creators = self.__db.get_creators()
+        for creator in creators:
+            creator_id = creator['id' if self.__config["only_specified_creators"] else 'creator_id']
             products = self.__db.get_product_pages(creator_id)
             print(f"Downloading everything from {creator['name']}[{creator_id}]")
             creator_folder = os.path.join(self.__config["folder"], creator['name'])
@@ -115,6 +121,7 @@ class DownloadManager:
                     download_url = BASE_URL + content['download_url']
                     download_tasks.append({"path": product_path, "url": download_url, "name": product['name']})
 
+        tqdm.write(f"Downloading {len(download_tasks)} files")
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(self.__download_product, download_tasks)
 
@@ -122,7 +129,6 @@ class DownloadManager:
         with self.__semaphore:
             session = self.__sessions.get()
             try:
-                tqdm.write(f"Processing product {download_task['name']}")
                 path = download_task['path']
                 name = download_task['name']
                 response = session.get(download_task['url'], stream=True)
