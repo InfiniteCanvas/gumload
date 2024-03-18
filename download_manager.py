@@ -102,8 +102,11 @@ class DownloadManager:
     def download_all(self) -> None:
         if self.__config["refresh"]:
             self.__update_library()
-            for creator in self.__config["creators"]:
-                self.__update_products(creator["id"], creator["name"])
+            if self.__config["only_specified_creators"]:
+                for creator in self.__config["creators"]:
+                    self.__update_products(creator["id"], creator["name"])
+            else:
+                self.__update_all_products()
 
         download_tasks = []
         # only download from creators specified in config, else download everything in library
