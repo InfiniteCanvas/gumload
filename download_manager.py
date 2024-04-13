@@ -125,7 +125,7 @@ class DownloadManager:
                         product_path = f"{os.path.join(creator_folder, product['name'], database.sanitize_file_name(content['file_name']))}.{content['extension']}"
                         download_url = BASE_URL + content['download_url']
                         download_tasks.append({"path": product_path, "url": download_url, "name": product['name'],
-                                               "size": content["file_size"]})
+                                               "size": content["file_size"], "file_name": content["file_name"]})
                     except Exception as e:
                         tqdm.write(f"Something went wrong while processing {content}. \n{e}")
 
@@ -149,7 +149,7 @@ class DownloadManager:
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 total_size = int(response.headers.get('content-length', 0))
                 tqdm.write(
-                    f"Downloading product {download_task['name']}[{total_size / 1024 / 1024:.2f} MB] to {download_task['path']}")
+                    f"Downloading product {download_task['file_name']}[{total_size / 1024 / 1024:.2f} MB] to {download_task['path']}")
 
                 if os.path.exists(path) and os.path.getsize(path) == total_size:
                     tqdm.write(f"File [{name}] already downloaded and size matches, skipping download.")
